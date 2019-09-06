@@ -2,39 +2,85 @@ name: CI Builds
 on: [push, pull_request]
 
 jobs:
-    build:
-        name: Build and Test
-        runs-on: ${{matrix.os}}
-        strategy:
-            matrix:
-                os: [windows-latest, macOS-latest]
-                # os: [ubuntu-latest, windows-latest, macOS-latest]
-            fail-fast: false
-        steps:
-            - uses: actions/checkout@v1
-            - uses: actions/setup-node@v1
-              with:
-                  node-version: '10.x'
-            - id: install
-              name: Install
-              run: npm install
-            - id: build
-              name: Build
-              run: npm run compile
-            - id: test
-              name: Test
-              run: npm run testOnly
-    linuxbuild:
-        name: Build and Test (Ubuntu)
+    # build:
+    #     name: Build and Test
+    #     runs-on: ${{matrix.os}}
+    #     strategy:
+    #         matrix:
+    #             os: [windows-latest, macOS-latest]
+    #             # os: [ubuntu-latest, windows-latest, macOS-latest]
+    #         fail-fast: false
+    #     steps:
+    #         - uses: actions/checkout@v1
+    #         - uses: actions/setup-node@v1
+    #           with:
+    #               node-version: '10.x'
+    #         - id: install
+    #           name: Install
+    #           run: npm install
+    #         - id: build
+    #           name: Build
+    #           run: npm run compile
+    #         - id: test
+    #           name: Test
+    #           run: npm run testOnly
+    # linuxbuild:
+    #     name: Build and Test (Ubuntu)
+    #     runs-on: ubuntu-latest
+    #     steps:
+    #         - id: setup
+    #           name: Setup Ubuntu
+    #           run: |
+    #               sudo apt-get update
+    #               sudo apt-get install -y libgtk-3-dev libxss1 xvfb
+    #               sudo apt-get install -y libnss3-dev libasound2
+    #               sudo apt-get install -y libasound2-plugins
+    #         - uses: actions/checkout@v1
+    #         - uses: actions/setup-node@v1
+    #           with:
+    #               node-version: '10.x'
+    #         - id: install
+    #           name: Install
+    #           run: npm install
+    #         - id: build
+    #           name: Build
+    #           run: npm run compile
+    #         - id: test
+    #           name: Test
+    #           run: xvfb-run npm run testOnly
+    linuxinteg:
+        name: Integ Test (Ubuntu)
         runs-on: ubuntu-latest
         steps:
             - id: setup
               name: Setup Ubuntu
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y libgtk-3-dev libxss1 xvfb
-                  sudo apt-get install -y libnss3-dev libasound2
-                  sudo apt-get install -y libasound2-plugins
+                  wget -q https://packages.microsoft.com/keys/microsoft.asc -O- | apt-key add -
+                  wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+                  sudo dpkg -i packages-microsoft-prod.deb
+                  sudo add-apt-repository universe
+                  sudo apt-get install -y apt-transport-https
+                  sudo add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main"
+                  sudo apt-get update
+                  # Install .NET Core 2.1 and VSCode
+                  sudo apt-get install -y dotnet-sdk-2.1 code
+                  # Install other needed dependencies
+                  sudo apt-get install -y python2.7 python3.7 docker
+                  sudo apt-get install -y libgtk-3-dev libxss1 xvfb libnss3-dev libasound2 libasound2-plugins
+                  pip3 install --user aws-sam-cli
+                  pip3 install --upgrade awscli
+                  pip3 install pylint
+            - id: setup2
+              name: Setup Ubuntu 2
+              run: |
+                  # make sure that SAM is in the path, is not automatically done on CodeBuild
+                  USER_BASE_PATH=$(python -m site --user-base) && export PATH=$PATH:$USER_BASE_PATH/bin
+                  # start Docker
+                  nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay&
+                  timeout 15 sh -c "until docker info; do echo .; sleep 1; done"
+                  code --install-extension ms-vscode.csharp --user-data-dir /tmp/
+                  code --install-extension ms-python.python --user-data-dir /tmp/
             - uses: actions/checkout@v1
             - uses: actions/setup-node@v1
               with:
@@ -47,4 +93,4 @@ jobs:
               run: npm run compile
             - id: test
               name: Test
-              run: xvfb-run npm run testOnly
+              run: xvfb-run npm run integrationTestOnly
