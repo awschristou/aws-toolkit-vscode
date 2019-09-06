@@ -9,8 +9,10 @@ jobs:
             matrix:
                 os: [ubuntu-latest, windows-latest, macOS-latest]
         steps:
-            - id: getCode
-              uses: actions/checkout@v1
+            - uses: actions/checkout@v1
+            - uses: actions/setup-node@v1
+              with:
+                  node-version: '10.x'
             - id: install
               run: npm install
             - id: build
