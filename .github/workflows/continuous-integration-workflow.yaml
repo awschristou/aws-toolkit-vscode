@@ -19,4 +19,6 @@ jobs:
             - id: build
               run: npm run compile
             - id: test
-              run: npm test
+              run: npm testOnly
+            - id: integtest
+              run: npm integrationTestOnly
