@@ -24,3 +24,27 @@ jobs:
             - id: test
               name: Test
               run: npm run testOnly
+    linuxbuild:
+        name: Build and Test
+        runs-on: ubuntu-latest
+        steps:
+            - id: setup
+              name: Setup Ubuntu
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libgtk-3-dev libxss1 xvfb
+                  sudo apt-get install -y libnss3-dev libasound2
+                  sudo apt-get install -y libasound2-plugins
+            - uses: actions/checkout@v1
+            - uses: actions/setup-node@v1
+              with:
+                  node-version: '10.x'
+            - id: install
+              name: Install
+              run: npm install
+            - id: build
+              name: Build
+              run: npm run compile
+            - id: test
+              name: Test
+              run: xvfb-run npm run testOnly
